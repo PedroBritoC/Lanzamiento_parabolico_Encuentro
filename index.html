@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Simulación Lanzamiento Parabólico - P5.js</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+        }
+        h1 {
+            color: #00d4ff;
+            margin-bottom: 10px;
+            font-size: 1.5em;
+            text-align: center;
+        }
+        #main-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            max-width: 1400px;
+        }
+        #canvas-container {
+            border: 2px solid #00d4ff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+        #controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 320px;
+        }
+        .panel {
+            background: #16213e;
+            border: 1px solid #0f3460;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        .panel h2 {
+            color: #00d4ff;
+            font-size: 1.1em;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #0f3460;
+            padding-bottom: 8px;
+        }
+        .panel.proyectil h2 { color: #ff6b6b; }
+        .panel.objetivo h2 { color: #ffd93d; }
+        .panel.general h2 { color: #6bcb77; }
+        .slider-group {
+            margin-bottom: 10px;
+        }
+        .slider-group label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85em;
+            margin-bottom: 4px;
+            color: #b0b0b0;
+        }
+        .slider-group label span.val {
+            color: #00d4ff;
+            font-weight: bold;
+        }
+        .slider-group input[type="range"] {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #0f3460;
+            border-radius: 3px;
+            outline: none;
+        }
+        .slider-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #00d4ff;
+            cursor: pointer;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+            min-width: 100px;
+        }
+        button:hover { transform: translateY(-2px); }
+        .btn-launch {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+        }
+        .btn-reset {
+            background: linear-gradient(135deg, #6bcb77, #1dd1a1);
+            color: white;
+        }
+        .btn-pause {
+            background: linear-gradient(135deg, #ffd93d, #f39c12);
+            color: #333;
+        }
+        #info-display {
+            background: #0a0a1a;
+            border: 1px solid #0f3460;
+            border-radius: 8px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8em;
+            line-height: 1.6;
+        }
+        #info-display .hit { color: #6bcb77; font-weight: bold; }
+        #info-display .miss { color: #ff6b6b; font-weight: bold; }
+        select {
+            width: 100%;
+            padding: 6px;
+            background: #0f3460;
+            color: #e0e0e0;
+            border: 1px solid #00d4ff;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎯 Simulación de Lanzamiento Parabólico</h1>
+    <div id="main-container">
+        <div id="canvas-container"></div>
+        <div id="controls">
+            <!-- Panel Proyectil -->
+            <div class="panel proyectil">
+                <h2>🔴 Proyectil</h2>
+                <div class="slider-group">
+                    <label>Velocidad Inicial (m/s): <span class="val" id="val-vp">26.9</span></label>
+                    <input type="range" id="slider-vp" min="5" max="60" step="0.5" value="26.875">
+                </div>
+                <div class="slider-group">
+                    <label>Ángulo de Lanzamiento (°): <span class="val" id="val-ang">20</span></label>
+                    <input type="range" id="slider-ang" min="0" max="90" step="1" value="20">
+                </div>
+                <div class="slider-group">
+                    <label>Altura Inicial (m): <span class="val" id="val-yi">1.6</span></label>
+                    <input type="range" id="slider-yi" min="0" max="20" step="0.1" value="1.6">
+                </div>
+                <div class="slider-group">
+                    <label>Posición X Inicial (m): <span class="val" id="val-xi">0</span></label>
+                    <input type="range" id="slider-xi" min="0" max="20" step="0.5" value="0">
+                </div>
+            </div>
+
+            <!-- Panel Objetivo -->
+            <div class="panel objetivo">
+                <h2>🔵 Objetivo / Móvil</h2>
+                <div class="slider-group">
+                    <label>Tipo de Movimiento:</label>
+                    <select id="sel-tipo">
+                        <option value="vertical">Lanzamiento Vertical</option>
+                        <option value="parabolico">Lanzamiento Parabólico</option>
+                        <option value="horizontal">Movimiento Horizontal</option>
+                        <option value="estatico">Estático (fijo)</option>
+                    </select>
+                </div>
+                <div class="slider-group">
+                    <label>Velocidad Inicial (m/s): <span class="val" id="val-vm">10</span></label>
+                    <input type="range" id="slider-vm" min="0" max="40" step="0.5" value="10">
+                </div>
+                <div class="slider-group">
+                    <label>Ángulo Objetivo (°): <span class="val" id="val-angm">90</span></label>
+                    <input type="range" id="slider-angm" min="0" max="360" step="1" value="90">
+                </div>
+                <div class="slider-group">
+                    <label>Posición X Inicial (m): <span class="val" id="val-xim">50</span></label>
+                    <input type="range" id="slider-xim" min="10" max="100" step="1" value="50">
+                </div>
+                <div class="slider-group">
+                    <label>Posición Y Inicial (m): <span class="val" id="val-yim">0</span></label>
+                    <input type="range" id="slider-yim" min="0" max="30" step="0.5" value="0">
+                </div>
+            </div>
+
+            <!-- Panel General -->
+            <div class="panel general">
+                <h2>⚙️ General</h2>
+                <div class="slider-group">
+                    <label>Gravedad (m/s²): <span class="val" id="val-g">9.8</span></label>
+                    <input type="range" id="slider-g" min="1" max="25" step="0.1" value="9.8">
+                </div>
+                <div class="slider-group">
+                    <label>Velocidad Simulación: <span class="val" id="val-speed">1.0</span></label>
+                    <input type="range" id="slider-speed" min="0.1" max="3" step="0.1" value="1.0">
+                </div>
+                <div class="slider-group">
+                    <label>Tolerancia Impacto (m): <span class="val" id="val-tol">2.0</span></label>
+                    <input type="range" id="slider-tol" min="0.5" max="10" step="0.5" value="2.0">
+                </div>
+                <div class="btn-group" style="margin-top: 10px;">
+                    <button class="btn-launch" onclick="launchSim()">🚀 Lanzar</button>
+                    <button class="btn-pause" onclick="togglePause()">⏸ Pausar</button>
+                    <button class="btn-reset" onclick="resetSim()">🔄 Reiniciar</button>
+                </div>
+            </div>
+
+            <!-- Info -->
+            <div class="panel">
+                <h2>📊 Información</h2>
+                <div id="info-display">
+                    Estado: <b>Listo</b><br>
+                    Tiempo: 0.00 s<br>
+                    Proyectil: (0.0, 0.0)<br>
+                    Objetivo: (0.0, 0.0)<br>
+                    Distancia: -- m
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ==================== VARIABLES GLOBALES ====================
+    let simRunning = false;
+    let simPaused = false;
+    let simTime = 0;
+    let dt = 0.01;
+    let hitDetected = false;
+    let missDetected = false;
+
+    // Trayectorias (historial de posiciones)
+    let trailProyectil = [];
+    let trailObjetivo = [];
+
+    // Posiciones actuales
+    let projX = 0, projY = 0;
+    let objX = 0, objY = 0;
+
+    // Escala y offset del canvas
+    let scaleF = 1;
+    let offsetX = 0, offsetY = 0;
+
+    // ==================== SETUP P5.JS ====================
+    function setup() {
+        let cnv = createCanvas(850, 500);
+        cnv.parent('canvas-container');
+        textFont('Segoe UI');
+        resetSim();
+        setupSliders();
+    }
+
+    function setupSliders() {
+        // Proyectil
+        linkSlider('slider-vp', 'val-vp');
+        linkSlider('slider-ang', 'val-ang');
+        linkSlider('slider-yi', 'val-yi');
+        linkSlider('slider-xi', 'val-xi');
+        // Objetivo
+        linkSlider('slider-vm', 'val-vm');
+        linkSlider('slider-angm', 'val-angm');
+        linkSlider('slider-xim', 'val-xim');
+        linkSlider('slider-yim', 'val-yim');
+        // General
+        linkSlider('slider-g', 'val-g');
+        linkSlider('slider-speed', 'val-speed');
+        linkSlider('slider-tol', 'val-tol');
+    }
+
+    function linkSlider(sliderId, valId) {
+        let s = document.getElementById(sliderId);
+        let v = document.getElementById(valId);
+        s.addEventListener('input', () => {
+            v.textContent = parseFloat(s.value).toFixed(1);
+            if (!simRunning) resetSim();
+        });
+    }
+
+    function getParam(id) {
+        return parseFloat(document.getElementById(id).value);
+    }
+
+    // ==================== CÁLCULO DE ESCALA ====================
+    function computeScale() {
+        let vp = getParam('slider-vp');
+        let ang = getParam('slider-ang');
+        let yi = getParam('slider-yi');
+        let g = getParam('slider-g');
+        let xim = getParam('slider-xim');
+
+        // Calcular alcance máximo aproximado del proyectil
+        let angRad = ang * PI / 180;
+        let tVuelo = 2 * vp * sin(angRad) / g + sqrt((vp * sin(angRad))^2 / (g*g) + 2*yi/g);
+        let xMax = vp * cos(angRad) * tVuelo;
+
+        let maxX = max(xMax, xim) * 1.15;
+        let maxY = max((vp * sin(angRad))^2 / (2*g) + yi, 30) * 1.15;
+
+        maxX = max(maxX, 10);
+        maxY = max(maxY, 10);
+
+        let scaleX = (width - 80) / maxX;
+        let scaleY = (height - 80) / maxY;
+        scaleF = min(scaleX, scaleY);
+
+        offsetX = 50;
+        offsetY = height - 40;
+    }
+
+    function worldToScreen(wx, wy) {
+        return {
+            x: offsetX + wx * scaleF,
+            y: offsetY - wy * scaleF
+        };
+    }
+
+    // ==================== DIBUJO ====================
+    function draw() {
+        background(15, 15, 35);
+
+        computeScale();
+        drawGrid();
+        drawGround();
+
+        if (simRunning && !simPaused) {
+            updateSimulation();
+        }
+
+        // Dibujar trayectorias
+        drawTrail(trailProyectil, color(255, 107, 107, 100));
+        drawTrail(trailObjetivo, color(100, 180, 255, 100));
+
+        // Dibujar cuerpos
+        if (simRunning || simTime > 0) {
+            drawProyectil();
+            drawObjetivo();
+            drawDistanceLine();
+        }
+
+        // Dibujar ángulo de lanzamiento
+        if (!simRunning) {
+            drawLaunchAngle();
+        }
+
+        // Estado
+        drawStatus();
+        updateInfoPanel();
+    }
+
+    function drawGrid() {
+        stroke(40, 60, 100, 80);
+        strokeWeight(0.5);
+
+        // Líneas verticales
+        let step = getGridStep(width / scaleF);
+        for (let wx = 0; wx <= width / scaleF + step; wx += step) {
+            let s = worldToScreen(wx, 0);
+            let s2 = worldToScreen(wx, height / scaleF);
+            line(s.x, s2.y, s.x, s.y);
+
+            // Etiqueta
+            fill(150, 180, 220);
+            noStroke();
+            textSize(10);
+            textAlign(CENTER, TOP);
+            text(wx.toFixed(0), s.x, s.y + 5);
+            stroke(40, 60, 100, 80);
+        }
+
+        // Líneas horizontales
+        for (let wy = 0; wy <= height / scaleF + step; wy += step) {
+            let s = worldToScreen(0, wy);
+            let s2 = worldToScreen(width / scaleF, wy);
+            line(s.x, s.y, s2.x, s.y);
+
+            if (wy > 0) {
+                fill(150, 180, 220);
+                noStroke();
+                textSize(10);
+                textAlign(RIGHT, CENTER);
+                text(wy.toFixed(0), s.x - 5, s.y);
+                stroke(40, 60, 100, 80);
+            }
+        }
+
+        // Ejes
+        stroke(100, 150, 200);
+        strokeWeight(1.5);
+        let origin = worldToScreen(0, 0);
+        let xEnd = worldToScreen(width / scaleF, 0);
+        let yEnd = worldToScreen(0, height / scaleF);
+        line(origin.x, origin.y, xEnd.x, xEnd.y);
+        line(origin.x, origin.y, origin.x, yEnd.y);
+
+        // Etiquetas ejes
+        fill(0, 212, 255);
+        noStroke();
+        textSize(12);
+        textAlign(CENTER, TOP);
+        text('X (m)', (origin.x + xEnd.x) / 2, origin.y + 18);
+        textAlign(RIGHT, CENTER);
+        text('Y (m)', origin.x - 10, (origin.y + yEnd.y) / 2);
+    }
+
+    function getGridStep(range) {
+        let steps = [1, 2, 5, 10, 20, 25, 50, 100];
+        for (let s of steps) {
+            if (range / s <= 15) return s;
+        }
+        return 100;
+    }
+
+    function drawGround() {
+        let s1 = worldToScreen(-5, 0);
+        let s2 = worldToScreen(200, 0);
+        stroke(100, 180, 100);
+        strokeWeight(2);
+        line(s1.x, s1.y, s2.x, s2.y);
+
+        // Patrón de suelo
+        stroke(80, 140, 80, 100);
+        strokeWeight(1);
+        for (let wx = -5; wx < 200; wx += 3) {
+            let sp = worldToScreen(wx, 0);
+            line(sp.x, sp.y, sp.x - 5, sp.y + 8);
+        }
+    }
+
+    function drawProyectil() {
+        let sp = worldToScreen(projX, projY);
+        // Resplandor
+        noStroke();
+        fill(255, 107, 107, 40);
+        ellipse(sp.x, sp.y, 30, 30);
+        fill(255, 107, 107, 80);
+        ellipse(sp.x, sp.y, 18, 18);
+        // Cuerpo
+        fill(255, 80, 80);
+        stroke(255, 200, 200);
+        strokeWeight(2);
+        ellipse(sp.x, sp.y, 12, 12);
+        // Etiqueta
+        noStroke();
+        fill(255, 150, 150);
+        textSize(11);
+        textAlign(CENTER, BOTTOM);
+        text('Proyectil', sp.x, sp.y - 14);
+    }
+
+    function drawObjetivo() {
+        let so = worldToScreen(objX, objY);
+        // Resplandor
+        noStroke();
+        fill(100, 180, 255, 40);
+        ellipse(so.x, so.y, 30, 30);
+        fill(100, 180, 255, 80);
+        ellipse(so.x, so.y, 18, 18);
+        // Cuerpo
+        fill(80, 160, 255);
+        stroke(200, 230, 255);
+        strokeWeight(2);
+        rectMode(CENTER);
+        rect(so.x, so.y, 12, 12, 2);
+        // Etiqueta
+        noStroke();
+        fill(150, 200, 255);
+        textSize(11);
+        textAlign(CENTER, BOTTOM);
+        text('Objetivo', so.x, so.y - 14);
+    }
+
+    function drawTrail(trail, col) {
+        if (trail.length < 2) return;
+        noFill();
+        strokeWeight(2);
+        for (let i = 1; i < trail.length; i++) {
+            let alpha = map(i, 0, trail.length, 30, 255);
+            let c = color(red(col), green(col), blue(col), alpha);
+            stroke(c);
+            let s1 = worldToScreen(trail[i-1].x, trail[i-1].y);
+            let s2 = worldToScreen(trail[i].x, trail[i].y);
+            line(s1.x, s1.y, s2.x, s2.y);
+        }
+    }
+
+    function drawDistanceLine() {
+        let sp = worldToScreen(projX, projY);
+        let so = worldToScreen(objX, objY);
+        let d = dist(projX, projY, objX, objY);
+        let tol = getParam('slider-tol');
+
+        stroke(255, 255, 100, 80);
+        strokeWeight(1);
+        drawingContext.setLineDash([5, 5]);
+        line(sp.x, sp.y, so.x, so.y);
+        drawingContext.setLineDash([]);
+
+        // Distancia en el medio
+        let mx = (sp.x + so.x) / 2;
+        let my = (sp.y + so.y) / 2;
+        noStroke();
+        fill(255, 255, 100);
+        textSize(10);
+        textAlign(CENTER, CENTER);
+        text(d.toFixed(1) + ' m', mx, my - 10);
+    }
+
+    function drawLaunchAngle() {
+        let yi = getParam('slider-yi');
+        let xi = getParam('slider-xi');
+        let ang = getParam('slider-ang');
+        let sp = worldToScreen(xi, yi);
+        let angRad = ang * PI / 180;
+        let len = 60;
+
+        // Arco
+        noFill();
+        stroke(255, 200, 100, 150);
+        strokeWeight(1.5);
+        arc(sp.x, sp.y, 50, 50, -angRad, 0);
+
+        // Línea de dirección
+        stroke(255, 200, 100, 200);
+        strokeWeight(2);
+        let ex = sp.x + cos(-angRad) * len;
+        let ey = sp.y + sin(-angRad) * len;
+        line(sp.x, sp.y, ex, ey);
+
+        // Flecha
+        fill(255, 200, 100);
+        noStroke();
+        let arrowSize = 8;
+        let a = atan2(ey - sp.y, ex - sp.x);
+        triangle(
+            ex, ey,
+            ex - arrowSize * cos(a - 0.4), ey - arrowSize * sin(a - 0.4),
+            ex - arrowSize * cos(a + 0.4), ey - arrowSize * sin(a + 0.4)
+        );
+
+        // Texto ángulo
+        noStroke();
+        fill(255, 200, 100);
+        textSize(12);
+        textAlign(LEFT, CENTER);
+        text(ang + '°', sp.x + 35, sp.y - 15);
+    }
+
+    function drawStatus() {
+        noStroke();
+        fill(0, 0, 0, 150);
+        rect(10, 10, 200, 25, 5);
+        fill(255);
+        textSize(12);
+        textAlign(LEFT, CENTER);
+        let statusText = '⏹ Listo';
+        if (simRunning && !simPaused) statusText = '▶ Simulando...';
+        else if (simRunning && simPaused) statusText = '⏸ Pausado';
+        if (hitDetected) statusText = '🎯 ¡IMPACTO!';
+        if (missDetected) statusText = '❌ Sin impacto';
+        text(statusText, 20, 22);
+    }
+
+    // ==================== SIMULACIÓN ====================
+    function updateSimulation() {
+        let speed = getParam('slider-speed');
+        let stepsPerFrame = max(1, round(speed * 3));
+
+        for (let s = 0; s < stepsPerFrame; s++) {
+            simTime += dt;
+
+            let g = getParam('slider-g');
+            let vp = getParam('slider-vp');
+            let ang = getParam('slider-ang');
+            let yi = getParam('slider-yi');
+            let xi = getParam('slider-xi');
+            let vm = getParam('slider-vm');
+            let angm = getParam('slider-angm');
+            let xim = getParam('slider-xim');
+            let yim = getParam('slider-yim');
+            let tipo = document.getElementById('sel-tipo').value;
+            let tol = getParam('slider-tol');
+
+            let angRad = ang * PI / 180;
+            let angmRad = angm * PI / 180;
+
+            // Proyectil
+            projX = xi + vp * cos(angRad) * simTime;
+            projY = yi + vp * sin(angRad) * simTime - 0.5 * g * simTime * simTime;
+
+            // Objetivo según tipo
+            switch(tipo) {
+                case 'vertical':
+                    objX = xim;
+                    objY = yim + vm * sin(angmRad) * simTime - 0.5 * g * simTime * simTime;
+                    break;
+                case 'parabolico':
+                    objX = xim + vm * cos(angmRad) * simTime;
+                    objY = yim + vm * sin(angmRad) * simTime - 0.5 * g * simTime * simTime;
+                    break;
+                case 'horizontal':
+                    objX = xim - vm * simTime;
+                    objY = yim;
+                    break;
+                case 'estatico':
+                    objX = xim;
+                    objY = yim;
+                    break;
+            }
+
+            // Guardar trail
+            trailProyectil.push({x: projX, y: projY});
+            trailObjetivo.push({x: objX, y: objY});
+
+            // Limitar tamaño trail
+            if (trailProyectil.length > 2000) trailProyectil.shift();
+            if (trailObjetivo.length > 2000) trailObjetivo.shift();
+
+            // Verificar impacto
+            let d = dist(projX, projY, objX, objY);
+            if (d <= tol && simTime > 0.1) {
+                hitDetected = true;
+                simRunning = false;
+                return;
+            }
+
+            // Verificar fin de simulación
+            if (projY < -5 || simTime > 30) {
+                missDetected = true;
+                simRunning = false;
+                return;
+            }
+        }
+    }
+
+    function updateInfoPanel() {
+        let d = dist(projX, projY, objX, objY);
+        let info = document.getElementById('info-display');
+        let statusStr = '<b>Listo</b>';
+        if (simRunning && !simPaused) statusStr = '<b style="color:#6bcb77">Simulando...</b>';
+        else if (simRunning && simPaused) statusStr = '<b style="color:#ffd93d">Pausado</b>';
+        if (hitDetected) statusStr = '<span class="hit">🎯 ¡IMPACTO!</span>';
+        if (missDetected) statusStr = '<span class="miss">❌ Sin impacto</span>';
+
+        info.innerHTML = `
+            Estado: ${statusStr}<br>
+            Tiempo: <b>${simTime.toFixed(2)} s</b><br>
+            Proyectil: <b>(${projX.toFixed(1)}, ${projY.toFixed(1)})</b> m<br>
+            Objetivo: <b>(${objX.toFixed(1)}, ${objY.toFixed(1)})</b> m<br>
+            Distancia: <b>${d.toFixed(2)} m</b><br>
+            Vel. Proyectil: <b>${getParam('slider-vp').toFixed(1)} m/s</b><br>
+            Ángulo: <b>${getParam('slider-ang')}°</b>
+        `;
+    }
+
+    // ==================== CONTROLES ====================
+    function launchSim() {
+        if (simRunning && simPaused) {
+            simPaused = false;
+            return;
+        }
+        resetSim();
+        simRunning = true;
+        simPaused = false;
+        hitDetected = false;
+        missDetected = false;
+    }
+
+    function togglePause() {
+        if (simRunning) {
+            simPaused = !simPaused;
+        }
+    }
+
+    function resetSim() {
+        simRunning = false;
+        simPaused = false;
+        simTime = 0;
+        hitDetected = false;
+        missDetected = false;
+        trailProyectil = [];
+        trailObjetivo = [];
+
+        let xi = getParam('slider-xi');
+        let yi = getParam('slider-yi');
+        let xim = getParam('slider-xim');
+        let yim = getParam('slider-yim');
+
+        projX = xi;
+        projY = yi;
+        objX = xim;
+        objY = yim;
+    }
+
+    // Ajuste de ventana
+    function windowResized() {
+        // Mantener tamaño fijo del canvas
+    }
+    </script>
+</body>
+</html>
